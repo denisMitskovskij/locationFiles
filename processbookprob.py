@@ -1,0 +1,91 @@
+from __future__ import absolute_import
+import pandas as pd
+from io import open
+from ast import literal_eval
+import csv
+import re
+import enchant
+dictionary = enchant.Dict("en_US")
+target = []
+data_header = ['cap', 'location']
+
+alphabets= "([A-Za-z])"
+prefixes = "(Mr|St|Mrs|Ms|Dr)[.]"
+suffixes = "(Inc|Ltd|Jr|Sr|Co)"
+starters = "(Mr|Mrs|Ms|Dr|He\s|She\s|It\s|They\s|Their\s|Our\s|We\s|But\s|However\s|That\s|This\s|Wherever)"
+acronyms = "([A-Z][.][A-Z][.](?:[A-Z][.])?)"
+websites = "[.](com|net|org|io|gov)"
+data_header = ['cap', 'location']
+def split_into_sentences(text):
+    text = " " + text + "  "
+    text = text.replace("\n"," ")
+    text = re.sub(prefixes,"\\1<prd>",text)
+    text = re.sub(websites,"<prd>\\1",text)
+    if "Ph.D" in text: text = text.replace("Ph.D.","Ph<prd>D<prd>")
+    text = re.sub("\s" + alphabets + "[.] "," \\1<prd> ",text)
+    text = re.sub(acronyms+" "+starters,"\\1<stop> \\2",text)
+    text = re.sub(alphabets + "[.]" + alphabets + "[.]" + alphabets + "[.]","\\1<prd>\\2<prd>\\3<prd>",text)
+    text = re.sub(alphabets + "[.]" + alphabets + "[.]","\\1<prd>\\2<prd>",text)
+    text = re.sub(" "+suffixes+"[.] "+starters," \\1<stop> \\2",text)
+    text = re.sub(" "+suffixes+"[.]"," \\1<prd>",text)
+    text = re.sub(" " + alphabets + "[.]"," \\1<prd>",text)
+    if "”" in text: text = text.replace(".”","”.")
+    if "\"" in text: text = text.replace(".\"","\".")
+    if "!" in text: text = text.replace("!\"","\"!")
+    if "?" in text: text = text.replace("?\"","\"?")
+    text = text.replace(".",".<stop>")
+    text = text.replace("?","?<stop>")
+    text = text.replace("!","!<stop>")
+    text = text.replace("<prd>",".")
+    sentences = text.split("<stop>")
+    sentences = sentences[:-1]
+    sentences = [s.strip() for s in sentences]
+    return sentences
+
+def processFile():
+    data = ""
+    with open('book1.txt', 'r') as file:
+        data = file.read()
+    sentences = split_into_sentences(data)
+    tr_data = pd.read_csv("COCO.csv")
+    texts = tr_data["cap"]
+    locations = tr_data["location"]
+    dataset_data = []
+    unique_locs = []
+    loc_matches = dict()
+    loc_texts = dict()
+    for i in range(0, len(locations)):
+        locs = literal_eval(locations[i])
+        for j in range(0, len(locs)):
+            if (not unique_locs.__contains__(locs[j])):
+                unique_locs.append(locs[j])
+
+    for i in range(0, len(unique_locs)):
+        loc_texts[unique_locs[i]]=[]
+    for i in range(0, len(locations)):
+        locs = literal_eval(locations[i])
+        for j in range(0, len(locs)):
+            loc_texts[locs[j]].append(texts[i])
+
+    for i in range(0, len(unique_locs)):
+        loc_sentences = []
+        for j in range(1, len(sentences)):
+            if (sentences[j].__contains__(unique_locs[i]) & (not sentences[j-1].__contains__(unique_locs[i]))):
+                sentence = sentences[j-1].replace('\"', "")
+                sentArr = sentence.split(" ")
+                if (sentArr.__len__()>10):
+                    loc_sentences.append(sentence)
+                    dataset_data.append([sentence, [unique_locs[i]]])
+        loc_matches[unique_locs[i]]=loc_sentences
+
+    with open("book4probReverse.csv", 'w', encoding='UTF8', newline='') as file:
+        writer = csv.writer(file)
+        # Use writerows() not writerow()
+        writer.writerow(data_header)
+        writer.writerows(dataset_data)
+processFile()
+
+
+
+
+
