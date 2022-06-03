@@ -330,7 +330,7 @@ def main():
             batch = next(train_dataloader)
             batch = tuple(t.to(device) for t in batch)
             source_ids,source_mask,target_ids,target_mask = batch
-            loss,_,_ = model(source_ids=source_ids,source_mask=source_mask,target_ids=target_ids,target_mask=target_mask)
+            loss,_,_ = model(source_ids=source_ids,source_mask=source_mask,target_ids=target_ids,target_mask=target_mask,tokenizer=tokenizer)
             
             if args.n_gpu > 1:
                 loss = loss.mean() # mean() to average on multi-gpu.
@@ -383,7 +383,7 @@ def main():
 
                     with torch.no_grad():
                         _,loss,num = model(source_ids=source_ids,source_mask=source_mask,
-                                           target_ids=target_ids,target_mask=target_mask)     
+                                           target_ids=target_ids,target_mask=target_mask,tokenizer=tokenizer)
                     eval_loss += loss.sum().item()
                     tokens_num += num.sum().item()
                 #Pring loss of dev dataset    
@@ -442,7 +442,7 @@ def main():
                     batch = tuple(t.to(device) for t in batch)
                     source_ids,source_mask= batch                  
                     with torch.no_grad():
-                        preds = model(source_ids=source_ids,source_mask=source_mask)  
+                        preds = model(source_ids=source_ids,source_mask=source_mask,tokenizer=tokenizer)
                         for pred in preds:
                             t=pred[0].cpu().numpy()
                             t=list(t)
@@ -498,7 +498,7 @@ def main():
                 batch = tuple(t.to(device) for t in batch)
                 source_ids,source_mask= batch                  
                 with torch.no_grad():
-                    preds = model(source_ids=source_ids,source_mask=source_mask)  
+                    preds = model(source_ids=source_ids,source_mask=source_mask,tokenizer=tokenizer)
                     for pred in preds:
                         #t=pred[0].cpu().numpy()
                         t = pred[0].cpu()
